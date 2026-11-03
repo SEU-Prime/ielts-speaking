@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f5f1">
+    <title>IELTS Speaking | 口语题库</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="IELTS Speaking 主页">
+          <span class="brand-mark">S</span>
+          <span class="brand-copy"><strong>IELTS SPEAKING</strong><small>QUESTION BANK · 2026</small></span>
+        </a>
+        <div class="topbar-meta">
+          <span class="live-dot"></span>
+          <span>2026 题库</span>
+          <span class="topbar-divider"></span>
+          <span class="topbar-note">口语练习工作台</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow">SPEAKING PRACTICE / 2026</p>
+            <h1>口语题库</h1>
+            <p class="heading-subtitle">按题目练习，参考答案保持简洁自然。</p>
+          </div>
+          <div class="heading-art" aria-hidden="true">
+            <img src="study-notes.jpg" alt="">
+            <span class="art-label">SPEAK<br>WITH EASE</span>
+          </div>
+        </section>
+
+        <section class="metrics" aria-label="题库统计">
+          <div class="metric"><strong id="metric-topics">—</strong><span>个话题</span></div>
+          <div class="metric"><strong id="metric-p1">—</strong><span>Part 1 小问</span></div>
+          <div class="metric"><strong id="metric-p3">—</strong><span>Part 3 追问</span></div>
+          <div class="metric-note">样例答案约 6.5–7 分表达难度</div>
+        </section>
+
+        <div class="workspace">
+          <aside class="library-panel" aria-label="题目筛选">
+            <div class="search-wrap">
+              <label for="search-input">搜索题目</label>
+              <div class="search-box">
+                <span class="search-glyph" aria-hidden="true">⌕</span>
+                <input id="search-input" type="search" placeholder="输入关键词" autocomplete="off">
+                <kbd>Ctrl K</kbd>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <label for="part-filter">考试部分</label>
+              <select id="part-filter">
+                <option value="all">全部 Part</option>
+                <option value="1">Part 1</option>
+                <option value="2">Part 2 &amp; 3</option>
+              </select>
+            </div>
+
+            <div class="filter-row">
+              <label for="period-filter">题库批次</label>
+              <select id="period-filter">
+                <option value="all">全部批次</option>
+                <option value="current">9–12 月在考</option>
+                <option value="archive">5–8 月及历史题</option>
+              </select>
+            </div>
+
+            <div class="filter-row">
+              <label for="region-filter">考区</label>
+              <select id="region-filter">
+                <option value="Mainland">大陆地区</option>
+                <option value="Non-mainland">非大陆地区</option>
+                <option value="all">全部考区</option>
+              </select>
+            </div>
+
+            <button class="saved-filter" id="saved-filter" type="button" aria-pressed="false">
+              <span aria-hidden="true">☆</span><span>只看收藏</span><span class="saved-count" id="saved-count">0</span>
+            </button>
+
+            <div class="list-heading">
+              <span>话题列表</span>
+              <span id="result-count">0</span>
+            </div>
+            <nav class="topic-list" id="topic-list" aria-label="话题列表"></nav>
+            <p class="list-footnote">题目来源于所附 2026 年 5–8 月及 9–12 月题库。</p>
+          </aside>
+
+          <section class="study-panel" id="study-panel" aria-live="polite">
+            <div class="loading-state">正在载入题库…</div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <span>答案以大四数学系学生为示范人设，请结合真实经历调整。</span>
+        <span>流利与连贯 · 词汇 · 语法 · 发音</span>
+      </footer>
+    </div>
+    <script src="app.js" defer></script>
+  </body>
+</html>
