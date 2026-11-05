@@ -29,6 +29,10 @@ function escapeHtml(value = "") {
   })[character]);
 }
 
+function countWords(text) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 function sourceDescription(topic) {
   const unique = [...new Map(topic.sources.map((source) => [`${source.period}-${source.page}`, source])).values()];
   return unique.map((source) => `${source.period.replace("2026-", "")} 月题库 · p.${source.page}`).join("；");
@@ -85,7 +89,7 @@ function renderTopic() {
   const p1List = topic.part === 1 ? `
     <div class="section-heading"><h2>Part 1 questions</h2><span>${topic.questions.length} 道小问</span></div>
     <div class="question-list">${topic.questions.map((question, index) => {
-      const answer = partOneAnswer(topic, question, index);
+      const answer = topic.answers.part1[index];
       return `
       <article class="question-item">
         <div class="question-head"><span class="question-number">${String(index + 1).padStart(2, "0")}</span><p class="question-text">${escapeHtml(question)}</p></div>
@@ -99,12 +103,12 @@ function renderTopic() {
     <div class="section-heading"><h2>Part 2 cue card</h2><span>目标：1 分 40 秒–2 分钟</span></div>
     <div class="cue-card"><p class="cue-prompt">${escapeHtml(topic.prompt)}</p><ul>${topic.cues.map((cue) => `<li>${escapeHtml(cue)}</li>`).join("")}</ul></div>
     <article class="answer-block">
-      <div class="answer-top"><span class="answer-label">口语示范</span><div class="answer-tools"><span class="word-count">${countWords(partTwoAnswer(topic))} 词 · 约 2 分钟</span><button class="text-action" type="button" data-copy="part2-answer">复制</button><button class="text-action" type="button" data-speak="part2-answer">朗读</button></div></div>
-      <p class="answer-text" id="part2-answer">${escapeHtml(partTwoAnswer(topic))}</p>
+      <div class="answer-top"><span class="answer-label">口语示范</span><div class="answer-tools"><span class="word-count">${countWords(topic.answers.part2)} 词 · 约 2 分钟</span><button class="text-action" type="button" data-copy="part2-answer">复制</button><button class="text-action" type="button" data-speak="part2-answer">朗读</button></div></div>
+      <p class="answer-text" id="part2-answer">${escapeHtml(topic.answers.part2)}</p>
     </article>
     <div class="section-heading"><h2>Part 3 discussion</h2><span>${topic.questions.length} 道延伸题</span></div>
     <div class="question-list">${topic.questions.map((question, index) => {
-      const answer = partThreeAnswer(topic, question, index);
+      const answer = topic.answers.part3[index];
       return `
       <article class="question-item">
         <div class="question-head"><span class="question-number">${String(index + 1).padStart(2, "0")}</span><p class="question-text">${escapeHtml(question)}</p></div>
