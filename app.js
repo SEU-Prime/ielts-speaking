@@ -3,6 +3,7 @@ const state = {
   selectedId: null,
   part: "all",
   period: "all",
+  sortEdition: localStorage.getItem("ielts-pdf-order") || "2026-09/12",
   region: "Mainland",
   savedOnly: false,
   saved: new Set(JSON.parse(localStorage.getItem("ielts-saved") || "[]")),
@@ -17,6 +18,7 @@ const elements = {
   search: document.querySelector("#search-input"),
   part: document.querySelector("#part-filter"),
   period: document.querySelector("#period-filter"),
+  order: document.querySelector("#order-filter"),
   region: document.querySelector("#region-filter"),
   savedFilter: document.querySelector("#saved-filter"),
   savedCount: document.querySelector("#saved-count"),
@@ -46,7 +48,7 @@ function topicStatus(topic) {
 
 function matchingTopics() {
   const search = elements.search.value.trim().toLowerCase();
-  return state.topics.filter((topic) => {
+  const matches = state.topics.filter((topic) => {
     if (state.part !== "all" && String(topic.part) !== state.part) return false;
     if (state.period === "current" && !topic.latest) return false;
     if (state.period === "archive" && topic.latest) return false;
@@ -57,6 +59,15 @@ function matchingTopics() {
       if (!haystack.includes(search)) return false;
     }
     return true;
+  });
+  const originalOrder = new Map(state.topics.map((topic, index) => [topic.id, index]));
+  return matches.sort((left, right) => {
+    const leftOrder = left.sources.find((source) => source.period === state.sortEdition)?.pdfOrder;
+    const rightOrder = right.sources.find((source) => source.period === state.sortEdition)?.pdfOrder;
+    if (leftOrder == null && rightOrder == null) return originalOrder.get(left.id) - originalOrder.get(right.id);
+    if (leftOrder == null) return 1;
+    if (rightOrder == null) return -1;
+    return leftOrder - rightOrder || originalOrder.get(left.id) - originalOrder.get(right.id);
   });
 }
 
@@ -215,6 +226,11 @@ function updateMetrics() {
 elements.search.addEventListener("input", renderList);
 elements.part.addEventListener("change", () => { state.part = elements.part.value; renderList(); });
 elements.period.addEventListener("change", () => { state.period = elements.period.value; renderList(); });
+elements.order.addEventListener("change", () => {
+  state.sortEdition = elements.order.value;
+  localStorage.setItem("ielts-pdf-order", state.sortEdition);
+  renderList();
+});
 elements.region.addEventListener("change", () => { state.region = elements.region.value; renderList(); });
 elements.savedFilter.addEventListener("click", () => { state.savedOnly = !state.savedOnly; renderList(); });
 document.addEventListener("keydown", (event) => {
@@ -231,6 +247,10 @@ fetch("data.json")
   })
   .then((topics) => {
     state.topics = topics;
+    if (![...elements.order.options].some((option) => option.value === state.sortEdition)) {
+      state.sortEdition = "2026-09/12";
+    }
+    elements.order.value = state.sortEdition;
     state.selectedId = topics.find((topic) => topic.region === "Mainland" && topic.latest)?.id || topics[0]?.id || null;
     updateMetrics();
     renderList();
