@@ -10,6 +10,9 @@ const state = {
   timerSeconds: 0,
   timerHandle: null,
   timerRunning: false,
+  speechQueue: [],
+  speechIndex: 0,
+  speechStatus: "idle",
 };
 
 const elements = {
@@ -72,6 +75,7 @@ function matchingTopics() {
 }
 
 function renderList() {
+  stopContinuousReading();
   const topics = matchingTopics();
   elements.resultCount.textContent = topics.length;
   elements.savedCount.textContent = state.saved.size;
@@ -103,7 +107,7 @@ function renderTopic() {
       const answer = topic.answers.part1[index];
       return `
       <article class="question-item">
-        <div class="question-head"><span class="question-number">${String(index + 1).padStart(2, "0")}</span><p class="question-text">${escapeHtml(question)}</p></div>
+        <div class="question-head"><span class="question-number">${String(index + 1).padStart(2, "0")}</span><p class="question-text">${escapeHtml(question)}</p><button class="icon-button question-speak" type="button" data-speak-question="${index}" aria-label="朗读问题和答案" title="朗读问题和答案">▶</button></div>
         <details class="question-details" ${index === 0 ? "open" : ""}>
           <summary>参考答案 <span class="answer-timing">约 ${countWords(answer)} 词 · 20–25 秒</span></summary>
           <div class="question-answer"><p>${escapeHtml(answer)}</p></div>
@@ -122,7 +126,7 @@ function renderTopic() {
       const answer = topic.answers.part3[index];
       return `
       <article class="question-item">
-        <div class="question-head"><span class="question-number">${String(index + 1).padStart(2, "0")}</span><p class="question-text">${escapeHtml(question)}</p></div>
+        <div class="question-head"><span class="question-number">${String(index + 1).padStart(2, "0")}</span><p class="question-text">${escapeHtml(question)}</p><button class="icon-button question-speak" type="button" data-speak-question="${index}" aria-label="朗读问题和答案" title="朗读问题和答案">▶</button></div>
         <details class="question-details"><summary>参考答案 <span class="answer-timing">约 ${countWords(answer)} 词 · 30–40 秒</span></summary><div class="question-answer"><p>${escapeHtml(answer)}</p></div></details>
       </article>`;
     }).join("")}</div>` : "";
@@ -135,6 +139,8 @@ function renderTopic() {
         <h2 class="topic-title">${escapeHtml(topic.title)}</h2>${part2Prompt}
       </div>
       <div class="topic-actions">
+        <button class="icon-button" id="read-topic" type="button" aria-label="连续朗读本话题" title="连续朗读本话题的答案与小题">▶</button>
+        <button class="icon-button" id="stop-reading" type="button" aria-label="停止朗读" title="停止朗读" hidden>■</button>
         <button class="icon-button" id="save-topic" type="button" aria-label="${isSaved ? "取消收藏" : "收藏话题"}" title="${isSaved ? "取消收藏" : "收藏话题"}" aria-pressed="${isSaved}">${isSaved ? "★" : "☆"}</button>
         <button class="icon-button" id="speak-prompt" type="button" aria-label="朗读题目" title="朗读题目">◖</button>
       </div>
@@ -154,6 +160,20 @@ function selectTopic(id) {
 }
 
 function bindTopicActions(topic, initialTimer) {
+  document.querySelector("#read-topic").addEventListener("click", () => {
+    if (state.speechStatus === "speaking") {
+      window.speechSynthesis.pause();
+      state.speechStatus = "paused";
+      updateSpeechControls();
+    } else if (state.speechStatus === "paused") {
+      window.speechSynthesis.resume();
+      state.speechStatus = "speaking";
+      updateSpeechControls();
+    } else {
+      startContinuousReading(topic);
+    }
+  });
+  document.querySelector("#stop-reading").addEventListener("click", stopContinuousReading);
   document.querySelector("#save-topic").addEventListener("click", () => {
     if (state.saved.has(topic.id)) state.saved.delete(topic.id);
     else state.saved.add(topic.id);
@@ -161,6 +181,11 @@ function bindTopicActions(topic, initialTimer) {
     renderList();
   });
   document.querySelector("#speak-prompt").addEventListener("click", () => speak(topic.part === 1 ? topic.questions.join(". ") : topic.prompt));
+  document.querySelectorAll("[data-speak-question]").forEach((button) => button.addEventListener("click", () => {
+    const index = Number(button.dataset.speakQuestion);
+    const answers = topic.part === 1 ? topic.answers.part1 : topic.answers.part3;
+    speak(`${topic.questions[index]} ${answers[index] || ""}`);
+  }));
   document.querySelectorAll("[data-copy]").forEach((button) => button.addEventListener("click", async () => {
     const text = document.querySelector(`#${button.dataset.copy}`)?.textContent || "";
     try { await navigator.clipboard.writeText(text); button.textContent = "已复制"; setTimeout(() => { button.textContent = "复制"; }, 1200); }
@@ -208,12 +233,73 @@ function formatTime(seconds) {
 }
 
 function speak(text) {
+  stopContinuousReading();
   if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
+  if (!text.trim()) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
   utterance.rate = 0.92;
   window.speechSynthesis.speak(utterance);
+}
+
+function continuousSpeechItems(topic) {
+  if (topic.part === 1) {
+    return topic.questions.flatMap((question, index) => [question, topic.answers.part1[index]].filter(Boolean));
+  }
+  return [topic.prompt, ...topic.cues, topic.answers.part2, ...topic.questions.flatMap((question, index) => [question, topic.answers.part3[index]])].filter(Boolean);
+}
+
+function startContinuousReading(topic) {
+  if (!("speechSynthesis" in window)) return;
+  stopContinuousReading();
+  state.speechQueue = continuousSpeechItems(topic);
+  state.speechIndex = 0;
+  state.speechStatus = "speaking";
+  updateSpeechControls();
+  speakNextItem();
+}
+
+function speakNextItem() {
+  if (state.speechStatus !== "speaking") return;
+  if (state.speechIndex >= state.speechQueue.length) {
+    state.speechQueue = [];
+    state.speechIndex = 0;
+    state.speechStatus = "idle";
+    updateSpeechControls();
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(state.speechQueue[state.speechIndex]);
+  utterance.lang = "en-US";
+  utterance.rate = 0.92;
+  utterance.onend = () => {
+    if (state.speechStatus !== "speaking") return;
+    state.speechIndex += 1;
+    speakNextItem();
+  };
+  utterance.onerror = () => {
+    if (state.speechStatus !== "idle") stopContinuousReading();
+  };
+  window.speechSynthesis.speak(utterance);
+}
+
+function stopContinuousReading() {
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  state.speechQueue = [];
+  state.speechIndex = 0;
+  state.speechStatus = "idle";
+  updateSpeechControls();
+}
+
+function updateSpeechControls() {
+  const readButton = document.querySelector("#read-topic");
+  const stopButton = document.querySelector("#stop-reading");
+  if (!readButton || !stopButton) return;
+  const paused = state.speechStatus === "paused";
+  const active = state.speechStatus !== "idle";
+  readButton.textContent = state.speechStatus === "speaking" ? "Ⅱ" : "▶";
+  readButton.setAttribute("aria-label", state.speechStatus === "speaking" ? "暂停连续朗读" : paused ? "继续连续朗读" : "连续朗读本话题");
+  readButton.title = state.speechStatus === "speaking" ? "暂停连续朗读" : paused ? "继续连续朗读" : "连续朗读本话题的答案与小题";
+  stopButton.hidden = !active;
 }
 
 function updateMetrics() {
